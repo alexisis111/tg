@@ -15,6 +15,9 @@ const MapComponent = () => {
                 position => {
                     const { latitude, longitude } = position.coords;
                     setUserLocation([latitude, longitude]);
+
+                    // Перемещаем карту к местоположению пользователя
+                    map.setView([latitude, longitude], map.getZoom());
                 },
                 error => {
                     console.error('Error getting user location:', error);
@@ -23,7 +26,7 @@ const MapComponent = () => {
         } else {
             console.error('Geolocation is not supported by your browser');
         }
-    }, []);
+    }, [mapRef]);
 
     return (
         <MapContainer center={[51.505, -0.09]} zoom={13} style={{ height: '400px' }} ref={mapRef}>

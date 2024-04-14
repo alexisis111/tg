@@ -1,50 +1,89 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { MapContainer, TileLayer, Marker } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
-import { icon } from 'leaflet';
-import cart from './marker.png'
+import { load } from '@2gis/mapgl';
+
+import markerImage from './marker.png'; // Путь к изображению маркера
 
 const MapComponent = () => {
+    const [mapglAPI, setMapglAPI] = useState(null);
     const mapRef = useRef(null);
     const [userLocation, setUserLocation] = useState(null);
     const [hasLocationPermission, setHasLocationPermission] = useState(false);
 
     useEffect(() => {
-        const map = mapRef.current;
+        const initializeMap = async () => {
+            try {
+                const mapgl = await load();
+                setMapglAPI(mapgl);
+            } catch (error) {
+                console.error('Error loading MapGL:', error);
+            }
+        };
 
-        // Проверяем, есть ли уже доступ к геолокации
+        initializeMap();
+
+        return () => {
+            if (mapglAPI) {
+                mapglAPI.destroy();
+            }
+        };
+    }, []);
+
+    useEffect(() => {
+        if (!mapglAPI) {
+            return;
+        }
+
+        const map = new mapglAPI.Map('map', {
+            center: [55.31878, 25.23584],
+            zoom: 13,
+            key: 'fbcdc7fb-c21f-4fbf-a626-4096221ac644',
+        });
+
+        let marker; // Создаем переменную для маркера
+
+        // Создаем маркер только если есть местоположение пользователя
+        if (userLocation) {
+            // Создаем маркер с изображением
+            marker = new mapglAPI.Marker(map, {
+                coordinates: userLocation,
+                icon: markerImage,
+            });
+        }
+
+        // Проверяем доступ к геолокации
         if (!hasLocationPermission && "geolocation" in navigator) {
             navigator.geolocation.getCurrentPosition(
                 position => {
                     const { latitude, longitude } = position.coords;
                     setUserLocation([latitude, longitude]);
-                    setHasLocationPermission(true); // Устанавливаем флаг разрешения на геолокацию
-                    if (map) {
-                        map.setView([latitude, longitude], map.getZoom());
+                    setHasLocationPermission(true);
+                    map.setCenter([latitude, longitude]);
+
+                    // Перемещаем маркер, если он уже создан
+                    if (marker) {
+                        marker.setCoordinates([latitude, longitude]);
+                    } else {
+                        // Иначе создаем новый маркер
+                        marker = new mapglAPI.Marker(map, {
+                            coordinates: [latitude, longitude],
+                            icon: markerImage,
+                        });
                     }
                 },
                 error => {
                     console.error('Error getting user location:', error);
                 }
             );
-        } else if (userLocation && map) {
-            // Используем старое разрешение, если оно уже есть
-            map.setView(userLocation, map.getZoom());
         }
-    }, [mapRef, userLocation, hasLocationPermission]);
 
-    const myIcon = icon({
-        iconUrl: cart,
-        iconSize: [32, 32], // Размеры изображения
-        iconAnchor: [16, 32], // Точка "якоря", куда будет указывать маркер на карте
-    });
+        return () => {
+            if (map) {
+                map.destroy();
+            }
+        };
+    }, [mapglAPI, userLocation, hasLocationPermission]);
 
-    return (
-        <MapContainer center={[51.505, -0.09]} zoom={13} style={{ height: '400px' }} ref={mapRef}>
-            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-            {userLocation && <Marker position={userLocation} icon={myIcon} />}
-        </MapContainer>
-    );
+    return <div id="map" style={{ width: '100%', height: '400px' }}></div>;
 };
 
 export default MapComponent;

@@ -5,16 +5,18 @@ import 'leaflet/dist/leaflet.css';
 const MapComponent = () => {
     const mapRef = useRef(null);
     const [userLocation, setUserLocation] = useState(null);
+    const [hasLocationPermission, setHasLocationPermission] = useState(false);
 
     useEffect(() => {
         const map = mapRef.current;
 
-        // Получаем текущее местоположение пользователя с помощью HTML5 Geolocation API
-        if ("geolocation" in navigator) {
+        // Проверяем, есть ли уже доступ к геолокации
+        if (!hasLocationPermission && "geolocation" in navigator) {
             navigator.geolocation.getCurrentPosition(
                 position => {
                     const { latitude, longitude } = position.coords;
                     setUserLocation([latitude, longitude]);
+                    setHasLocationPermission(true); // Устанавливаем флаг разрешения на геолокацию
                     if (map) {
                         map.setView([latitude, longitude], map.getZoom());
                     }
@@ -23,8 +25,11 @@ const MapComponent = () => {
                     console.error('Error getting user location:', error);
                 }
             );
+        } else if (userLocation && map) {
+            // Используем старое разрешение, если оно уже есть
+            map.setView(userLocation, map.getZoom());
         }
-    }, [mapRef]);
+    }, [mapRef, userLocation, hasLocationPermission]);
 
     return (
         <MapContainer center={[51.505, -0.09]} zoom={13} style={{ height: '400px' }} ref={mapRef}>

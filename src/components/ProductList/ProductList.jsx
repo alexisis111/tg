@@ -16,8 +16,10 @@ const MapComponent = () => {
                     const { latitude, longitude } = position.coords;
                     setUserLocation([latitude, longitude]);
 
-                    // Перемещаем карту к местоположению пользователя
-                    map.setView([latitude, longitude], map.getZoom());
+                    // Перемещаем карту к местоположению пользователя, если карта доступна
+                    if (map) {
+                        map.setView([latitude, longitude], map.getZoom());
+                    }
                 },
                 error => {
                     console.error('Error getting user location:', error);
@@ -37,3 +39,5 @@ const MapComponent = () => {
 };
 
 export default MapComponent;
+
+
